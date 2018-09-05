@@ -82,22 +82,25 @@ Class KahveDigital {
         return $return;
     }
 
+
     public static function calculatePrices($price, $rates) {
         $banks = KahveDigital::getAvailablePrograms();
         $return = array();
         foreach ($banks as $k => $v) {
             if ($v['installments'] == false)
                 continue;
-//            $return[$k] = array('active' => $rates[$k]['active']);
+        
             for ($i = 1; $i <= self::max_installment; $i++) {
                 $return[$k]['installments'][$i] = array(
-                    'total' => number_format((((100 + $rates[$k]['installments'][$i]['value']) * $price) / 100), 2, '.', '') . ' TL',
-                    'monthly' => number_format((((100 + $rates[$k]['installments'][$i]['value']) * $price) / 100) / $i, 2, '.', '') . ' TL',
+                    'active' => $rates[$k]['installments'][$i]['active'],
+                    'total' => number_format((((100 + $rates[$k]['installments'][$i]['value']) * $price) / 100), 2, '.', ''),
+                    'monthly' => number_format((((100 + $rates[$k]['installments'][$i]['value']) * $price) / 100) / $i, 2, '.', ''),
                 );
             }
         }
         return $return;
     }
+
 
     public function getRotatedRates($price, $rates) {
         $prices = KahveDigital::calculatePrices($price, $rates);
