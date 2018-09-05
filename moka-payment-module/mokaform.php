@@ -111,7 +111,7 @@ $moka_url = plugins_url() . '/moka-payment-module/';
 
 
 
-
+      	 <?php if ($rates[$banks]['installments'][$ins]['active']==1){   ?>
                                                                     <li class="taksit-li mokaorta">
                                                                         <input type="radio" id="s-option_<?php echo $banks; ?>_<?php echo $ins; ?>" name="mokatotal[<?php echo $banks; ?>][<?php echo $ins; ?>]" value="<?php echo $rates[$banks]['installments'][$ins]['total']; ?>" class="option-input  taksitradio radio">
                                                                             <label for="s-option2"><?php echo $ins ?> Taksit</label>
@@ -120,7 +120,7 @@ $moka_url = plugins_url() . '/moka-payment-module/';
                                                                     </li>
 
 
-
+      <?php } ?>
 
 
                                                                 <?php } ?>
