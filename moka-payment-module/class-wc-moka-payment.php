@@ -375,6 +375,7 @@ function woocommerce_moka_from_init() {
         }
 
         function receipt_page($orderid) {
+            global $woocommerce;
             $error_message = false;
             $order = new WC_Order($orderid);
             $rates = Kahvedigital::calculatePrices($order->get_total(), $this->rates);
