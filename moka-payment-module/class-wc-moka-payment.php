@@ -412,7 +412,7 @@ function woocommerce_moka_from_init() {
 
                     $order->add_order_note(__('Payment successful.', 'moka-payment-module') . '<br/>' . __('Payment ID', 'moka-payment-module') . ': ' . esc_sql($record['amount_paid']));
                     $order->payment_complete();
-                    $woocommerce->cart->empty_cart();
+                     WC()->cart->empty_cart();
                     wp_redirect($this->get_return_url());
                     $error_message = false;
                 } else {
