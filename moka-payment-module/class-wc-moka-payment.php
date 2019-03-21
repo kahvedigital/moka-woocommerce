@@ -255,7 +255,7 @@ function woocommerce_moka_from_init() {
 
             $amount = $order->get_total();
             $user_id = get_current_user_id();
-            $currency = 'TL';
+            $currency = $order->get_currency();
             $ucdaktif = $this->kahvedigital_moka_tdmode;
             if ($ucdaktif == 'off') {
                 $moka_url = "https://service.moka.com/PaymentDealer/DoDirectPayment";
@@ -381,6 +381,7 @@ function woocommerce_moka_from_init() {
             $rates = Kahvedigital::calculatePrices($order->get_total(), $this->rates);
             $status = $order->get_status();
             $showtotal = $order->get_total();
+			$currency=$order->get_currency();
             $installments_mode = $this->installments_mode;
             if ($status != 'pending')
                 return 'ok';
