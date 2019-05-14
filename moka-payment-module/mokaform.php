@@ -138,7 +138,7 @@ $moka_url = plugins_url() . '/moka-payment-module/';
 
                                             </div>
                                         <?php } ?>	
-                                        <button type="submit" class="mokaode" style=""><span class="mokaOdemeTutar"><?php echo $showtotal; ?></span><span class="currency"> USD</span><span class="mokaOdemeText"> ÖDE</span></button>
+                                        <button type="submit" class="mokaode" style=""><span class="mokaOdemeTutar"><?php echo $showtotal; ?></span><span class="currency"> <?php echo $currency; ?></span><span class="mokaOdemeText"> ÖDE</span></button>
                                 </form>
 
                             </div>
