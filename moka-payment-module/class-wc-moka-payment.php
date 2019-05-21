@@ -1,464 +1,335 @@
 <?php
-
-/*
- * Plugin Name:WooCommerce Moka Payment Gateway
- * Plugin URI: https://www.kahvedigital.com
- * Description: Moka Payment gateway for woocommerce
- * Version: 1.0.0
- * Author: KahveDigital
- * Author URI: http://kahvedigital.com
- * Domain Path: /i18n/languages/
- */
-
 if (!defined('ABSPATH')) {
-    exit;
+    exit; // Exit if accessed directly
 }
-error_reporting(E_ALL ^ E_NOTICE);
-include( plugin_dir_path(__FILE__) . 'includes/class-kahvedigital_mokaconfig.php');
-global $moka_db_version;
-$moka_db_version = '1.0';
-register_deactivation_hook(__FILE__, 'moka_deactivation');
-register_activation_hook(__FILE__, 'moka_activate');
-add_action('plugins_loaded', 'moka_update_db_check');
-
-function moka_update_db_check() {
-    global $moka_db_version;
-    global $wpdb;
-    $installed_ver = get_option("moka_db_version");
-    if ($installed_ver != $moka_db_version) {
-        moka_update();
-    }
-}
-
-function moka_update() {
-    global $moka_db_version;
-    update_option("moka_db_version", $moka_db_version);
-}
-
-function moka_activate() {
-    global $wpdb;
-    global $moka_db_version;
-    $moka_db_version = '1.0';
-
-    $charset_collate = $wpdb->get_charset_collate();
-    require_once( ABSPATH . 'wp-admin/includes/upgrade.php' );
-
-    add_option('moka_db_version', $moka_db_version);
-}
-
-function moka_deactivation() {
-    global $wpdb;
-    global $moka_db_version;
-
-    delete_option('moka_db_version');
-    flush_rewrite_rules();
-}
-
-function moka_install_data() {
-    global $wpdb;
-}
-
-add_action('plugins_loaded', 'woocommerce_moka_from_init', 0);
-
-function woocommerce_moka_from_init() {
-    if (!class_exists('WC_Payment_Gateway'))
-        return;
-
-    class WC_Gateway_Mokapos extends WC_Payment_Gateway {
-
-        public function __construct() {
-            $this->id = 'mokapos';
-            $this->method_title = __('Moka Checkout form', 'moka-payment-module');
-            $this->method_description = __('Moka Payment Module', 'moka-payment-module');
-            $this->icon = plugins_url('/moka-payment-module/img/cards.png', dirname(__FILE__));
-            $this->has_fields = false;
-            $this->supports = array('products', 'refunds');
-            $this->rates = get_option('kahvedigital_moka_rates');
-            $this->init_form_fields();
-            $this->init_settings();
-            $this->kahvedigital_moka_tdmode = $this->settings['kahvedigital_moka_tdmode'];
-            $this->kahvedigital_moka_dealercode = $this->settings['kahvedigital_moka_dealercode'];
-            $this->kahvedigital_moka_username = $this->settings['kahvedigital_moka_username'];
-            $this->kahvedigital_moka_password = $this->settings['kahvedigital_moka_password'];
-            $this->installments_mode = $this->settings['installments_mode'];
-            $this->title = $this->settings['title'];
-            $this->description = $this->settings['description'];
-            $this->enabled = $this->settings['enabled'];
-            $this->order_button_text = $this->settings['button_title'];
-            add_action('init', array(&$this, 'check_mokapos_response'));
-            add_action('woocommerce_api_wc_gateway_mokapos', array($this, 'check_mokapos_response'));
-            add_action('admin_notices', array($this, 'checksFields'));
-            if (version_compare(WOOCOMMERCE_VERSION, '2.0.0', '>=')) {
-                add_action('woocommerce_update_options_payment_gateways_' . $this->id, array($this, 'process_admin_options'));
-            } else {
-                add_action('woocommerce_update_options_payment_gateways', array($this, 'process_admin_options'));
-            }
-            add_action('woocommerce_receipt_mokapos', array($this, 'receipt_page'));
-        }
-
-        function checksFields() {
-            global $woocommerce;
-
-            if ($this->enabled == 'no')
-                return;
-        }
-
-        function init_form_fields() {
-            $this->form_fields = array(
-                'enabled' => array(
-                    'title' => __('Enable/Disable', 'moka-payment-module'),
-                    'label' => __('Enable Moka Form', 'moka-payment-module'),
-                    'type' => 'checkbox',
-                    'default' => 'no',
-                ),
-                'title' => array(
-                    'title' => __('Title', 'moka-payment-module'),
-                    'type' => 'text',
-                    'description' => __('This message will show to the user during checkout.', 'moka-payment-module'),
-                    'default' => 'Kredi Kartı İle Öde'
-                ),
-                'description' => array(
-                    'title' => __('Description.', 'moka-payment-module'),
-                    'type' => 'text',
-                    'description' => __('This controls the description which the user sees during checkout.', 'moka-payment-module'),
-                    'default' => __('Pay with your credit card via Moka.', 'moka-payment-module'),
-                    'desc_tip' => true,
-                ),
-                'button_title' => array(
-                    'title' => __('Checkout Button.', 'moka-payment-module'),
-                    'type' => 'text',
-                    'description' => __('Checkout Button.', 'moka-payment-module'),
-                    'default' => __('Pay with Moka.', 'moka-payment-module'),
-                    'desc_tip' => true,
-                ),
-                'kahvedigital_moka_dealercode' => array(
-                    'title' => __('Moka Dealer Code.', 'moka-payment-module'),
-                    'type' => 'text',
-                    'desc_tip' => __('Dealer Code Given by Moka System.', 'moka-payment-module'),
-                ),
-                'kahvedigital_moka_username' => array(
-                    'title' => __('Moka Username.', 'moka-payment-module'),
-                    'type' => 'text',
-                    'desc_tip' => __('Username Given by Moka System.', 'moka-payment-module'),
-                ),
-                'kahvedigital_moka_password' => array(
-                    'title' => __('Moka Password.', 'moka-payment-module'),
-                    'type' => 'text',
-                    'desc_tip' => __('Password Given by Moka System.', 'moka-payment-module'),
-                ),
-                'kahvedigital_moka_tdmode' => array(
-                    'title' => __('Three D Selection.', 'moka-payment-module'),
-                    'type' => 'select',
-                    'default' => 'off',
-                    'options' => array(
-                        'off' => __('OFF', 'moka-payment-module'),
-                        'on' => __('ON', 'moka-payment-module'),
-                    ),
-                ),
-                'installments_mode' => array(
-                    'title' => __('Installments Options.', 'moka-payment-module'),
-                    'type' => 'select',
-                    'default' => 'off',
-                    'options' => array(
-                        'off' => __('OFF', 'moka-payment-module'),
-                        'on' => __('ON', 'moka-payment-module'),
-                    ),
-                )
-            );
-        }
-
-        public function admin_options() {
-            $this->rates = get_option('kahvedigital_moka_rates');
-            if (isset($_POST['kahvedigital_moka_rates'])) {
-                KahveDigital::register_all_ins();
-            }
-            $moka_url = plugins_url() . '/moka-payment-module/';
-            echo '<img src="' . $moka_url . 'img/logo.png" width="150px"/>';
-            echo '<h2>Moka ödeme ayarları</h2><hr/>';
-            echo '<table class="form-table">';
-            $this->generate_settings_html();
-            echo '</table>';
-            if ($this->rates == false)
-                $installments = KahveDigital::createRatesUpdateForm(KahveDigital::setRatesDefault());
-            else
-                $installments = KahveDigital::createRatesUpdateForm(get_option('kahvedigital_moka_rates'));
-            echo '<input name="save" class="button-primary woocommerce-save-button" type="submit" value="Kaydet"><hr/>';
-            echo"<hr/><h1>";
-            echo __('installments options.', 'moka-payment-module');
-            echo "</h1><hr/> ";
-            echo $installments;
-            echo '<input name="save" class="button-primary woocommerce-save-button" type="submit" value="Kaydet"><hr/>';
-            include(dirname(__FILE__) . '/includes/kahvedigital_moka-help-about.php');
-        }
-
-        function post2Moka($order_id) {
-            global $woocommerce;
-            if (version_compare(get_bloginfo('version'), '4.5', '>='))
-                wp_get_current_user();
-            else
-                get_currentuserinfo();
-            $order = new WC_Order($order_id);
-
-            $ip = $_SERVER['REMOTE_ADDR'];
-
-            $user_meta = get_user_meta(get_current_user_id());
-
-            if (!function_exists('replaceSpace')) {
-
-                function replaceSpace($veri) {
-                    $veri = str_replace("/s+/", "", $veri);
-                    $veri = str_replace(" ", "", $veri);
-                    $veri = str_replace(" ", "", $veri);
-                    $veri = str_replace(" ", "", $veri);
-                    $veri = str_replace("/s/g", "", $veri);
-                    $veri = str_replace("/s+/g", "", $veri);
-                    $veri = trim($veri);
-                    return $veri;
-                }
-
-            }
+$moka_url = plugins_url() . '/moka-payment-module/';
+?>	<script src="//ajax.googleapis.com/ajax/libs/jquery/1.10.1/jquery.min.js"></script>
 
 
-            $name = $_POST['card-name'];
-            $number = $_POST['number'];
-            $expiry = $_POST['expiry'];
-            $cvc = $_POST['cvc'];
-            $total = $_POST['mokatotal'];
 
-            $expiry = explode("/", $expiry);
-            $expiryMM = $expiry[0];
-            $expiryYY = $expiry[1];
-            $expiryMM = replaceSpace($expiryMM);
-            $expiryYY = replaceSpace($expiryYY);
-            $number = replaceSpace($number);
-            if (is_array($total)) {
-                $bankalar = KahveDigital::getAvailablePrograms();
-                foreach ($bankalar as $key => $value) {
 
-                    $isim = $key;
-                    for ($x = 1; $x <= 12; $x++) {
+<script src="<?php echo $moka_url ?>/assets/js/card.js"></script>
 
-                        $taksit = $total[$key][$x];
-                        if (!empty($taksit)) {
-                            $installement = $x;
+<?php if ($error_message) { ?>
+    <div class="row">
+        <ul class="woocommerce-error" id="errDiv">
+            <li>
+                <?php echo __('Payment Error.', 'moka-payment-module') ?> 
+                <b><?php echo $error_message; ?></b><br/>
+                <?php echo __('Please check the form and try again.', 'moka-payment-module') ?>
+            </li>
+        </ul>
+    </div>
+<?php } ?>
+<link rel="stylesheet" type="text/css" href="<?php echo $moka_url ?>assets/css/moka.css">
+    <div class= "row"> 
+        <div class="col-xs-12">
 
-                            $paid = number_format($taksit, 2, '.', '');
+
+
+            <div id="moka-form" class="mokaform" > 
+
+                <div class="tum">
+                    <h3 class="odemeform-baslik">Ödeme Formu</h3>
+                    <div class="hepsi">
+
+                        <div class="demo-container">
+                            <div class="info-window cvc " ><div class="arrow-info"></div><div class="cvc-info"><img src="<?php echo $moka_url ?>img/cvc-help.png"></div></div>
+
+                            <div class="form-group active moka">
+                                <form    method="POST"   id="mokapostform" action="">
+
+
+                                    <div class="mokaname mokafull">
+                                        <input class="c-card card-name" placeholder="Kart İsim Soyisim" type="text" required    oninvalid="this.setCustomValidity('Kart sahibinin adını yazınız.')"  oninput="setCustomValidity('')" name="card-name" id="card-name">
+                                    </div>
+                                    <input value="<?php echo $orderid ?>" name="order_id" type="hidden">
+
+                                        <div class="mokacard mokaorta">
+                                            <i class="mokacardicon"></i>
+                                            <input id="mokacardnumber" class="c-card cardnumber" placeholder="Kart Numarası" required   oninvalid="this.setCustomValidity('Kartın üzerindeki 16 haneli numarayı giriniz.')" oninput="setCustomValidity('')" type="tel" name="number" >
+                                        </div>
+
+
+                                        <div class="mokaleft mokaexpry">
+                                            <input class="c-date c-card"  placeholder="AA/YY" type="tel" maxlength="7" required  oninvalid="this.setCustomValidity('Kartın son kullanma tarihini giriniz')" oninput="setCustomValidity('')" name="expiry" >
+                                        </div>
+
+                                        <div class="mokaright mokacvc">
+                                            <input class="card-cvc c-card" placeholder="CVC" required  type="number"  oninvalid="this.setCustomValidity('Kartın arkasındaki 3 ya da 4 basamaklı sayıyı giriniz')" oninput="setCustomValidity('')" name="cvc" >
+                                                <div class="moka-i-icon"><img src="<?php echo $moka_url ?>img/icons/info.png" width="14px"> </div>
+                                        </div>
+
+                                        </div>
+
+                                        </div>
+
+                                        <div class="tekcekim-container ">
+
+                                            <div class="tekcekim">
+
+                                                <li class="taksit-li " for="s-option" >
+                                                    <input type="radio" id="s-option"  name="mokatotal"  value="<?php echo $showtotal ?>" checked class="option-input taksitradio radio " >
+                                                        <label for="s-option">Tek Çekim</label>
+                                                        <div class="taksit-fiyat"> <?php echo $showtotal; ?></div>
+                                                        <div class="check"><div class="inside"></div></div>
+                                                </li>
+
+                                                <div class="taksit-secenek">
+                                                    <?php if ($installments_mode == 'on') { ?>
+                                                        <h3 class="taksit-secenekleri">Taksit Seçenekleri</h3>
+
+                                                        <div class="logolar-moka">
+
+                                                            <?php foreach ($rates as $bank => $rate) { ?>
+
+
+
+                                                                <div class="moka-banka-logo <?php echo $bank; ?>-logo"><img src="<?php echo $moka_url ?>img/<?php echo $bank ?>.svg"	></img></div>
+
+
+                                                            <?php } ?>	
+                                                        </div>
+
+                                                    <?php } ?>	
+                                                </div>
+                                            </div>  
+                                        </div>  
+                                        <?php if ($installments_mode == 'on') { ?>
+                                            <div class="taksit-container ">
+                                                <?php foreach ($rates as $bank => $rate) { ?>
+
+
+                                                    <div class="<?php echo $bank; ?>">
+                                                        <div class="taksit-title "><img src="<?php echo $moka_url ?>img/<?php echo $bank ?>.svg"></div>
+
+                                                        <?php for ($ins = 1; $ins < 13; $ins++) { ?>
+
+
+                                                            <?php foreach ($rates as $banks => $rate) { ?>
+                                                                <?php if ($bank == $banks) { ?>
+
+
+
+      	 <?php if ($rates[$banks]['installments'][$ins]['active']==1){   ?>
+                                                                    <li class="taksit-li mokaorta">
+                                                                        <input type="radio" id="s-option_<?php echo $banks; ?>_<?php echo $ins; ?>" name="mokatotal[<?php echo $banks; ?>][<?php echo $ins; ?>]" value="<?php echo $rates[$banks]['installments'][$ins]['total']; ?>" class="option-input  taksitradio radio">
+                                                                            <label for="s-option2"><?php echo $ins ?> Taksit</label>
+                                                                            <div class="taksit-fiyat"> <?php echo $rates[$banks]['installments'][$ins]['total']; ?> / <?php echo $rates[$banks]['installments'][$ins]['monthly']; ?> </div>
+                                                                            <div class="check"><div class="inside"></div></div>
+                                                                    </li>
+
+
+      <?php } ?>
+
+
+                                                                <?php } ?>
+                                                            <?php } ?>
+
+                                                        <?php } ?>
+
+
+
+
+                                                    </div>	
+
+
+                                                <?php } ?>
+
+                                            </div>
+                                        <?php } ?>	
+                                        <button type="submit" class="mokaode" style=""><span class="mokaOdemeTutar"><?php echo $showtotal; ?></span><span class="currency"> <?php echo $currency; ?></span><span class="mokaOdemeText"> ÖDE</span></button>
+                                </form>
+
+                            </div>
+
+
+                        </div>
+                        <div class="card-wrapper" style="margin-left:5px;"></div>
+                    </div>  
+
+
+                </div>
+            </div>
+
+            <script>
+                var theme = "<?php echo $moka_url ?>";
+                var taksit = "<?php echo $installments_mode ?>";
+
+            </script>
+
+
+            <script type="text/javascript">
+                new Card({
+                    form: document.querySelector('.hepsi'),
+                    container: '.card-wrapper',
+                    formSelectors: {
+
+                        nameInput: 'input#card-name'
+                    },
+
+                });
+                $(document).ready(function () {
+                    $('input[type=radio][name=mokatotal]').change(function () {
+
+                        $('.mokaOdemeTutar').text(this.value);
+					$('.currency').text(" <?php echo $currency;?>");
+                    });
+                });
+
+                if (taksit == 'on') {
+                    $(document).ready(function () {
+                        cardshow(0);
+                        $(".maximum-logo").click(function () {
+                            cardshow(0);
+                            $(".taksit-container").show();
+                            $(".maximum").show();
+                            $("#s-option_maximum_1").prop('checked', true);
+                        });
+
+                        $(".cardfinans-logo").click(function () {
+                            cardshow(0);
+                            $(".taksit-container").show();
+                            $(".cardfinans").show();
+                            $("#s-option_cardfinans_1").prop('checked', true);
+                        });
+                        $(".axess-logo").click(function () {
+                            cardshow(0);
+                            $(".taksit-container").show();
+                            $(".axess").show();
+                            $("#s-option_axess_1").prop('checked', true);
+                        });
+						 $(".paraf-logo").click(function () {
+                        cardshow(0);
+                        $(".taksit-container").show();
+                        $(".paraf").show();
+                        $("#s-option_paraf_1").prop('checked', true);
+						});
+                        $(".bonus-logo").click(function () {
+                            cardshow(0);
+                            $(".taksit-container").show();
+                            $(".bonus").show();
+                            $("#s-option_bonus_1").prop('checked', true);
+                        });
+                        $(".world-logo").click(function () {
+                            cardshow(0);
+                            $(".taksit-container").show();
+                            $(".world").show();
+                            $("#s-option_world_1").prop('checked', true);
+                        });
+                        $(".taksit-li").click(function () {
+                            $(".taksit-li").find('input[type="radio"]').removeAttr('checked');
+                            $(this).find('input[type="radio"]').prop('checked', true);
+                            var price = $(this).find('input[type="radio"]').val();
+                            $('.mokaOdemeTutar').text(price);
+                        });
+                        function cardshow(bankcode) {
+                            if (bankcode == '0') {
+                                $(".taksit-container").hide();
+                                $(".taksit-container").children().hide();
+                            } else if ((bankcode == 62) || (bankcode == 59) || (bankcode == 32) || (bankcode == 99) || (bankcode == 124) || (bankcode == 134) || (bankcode == 206)) {
+                                $(".taksit-container").hide();
+                                $(".taksit-container").children().hide();
+                                $(".taksit-container").show();
+                                $('.bonus').show();
+                                $("#s-option_bonus_1").prop('checked', true);
+                            } else if ((bankcode == 46) || (bankcode == 92)) {
+                                $(".taksit-container").hide();
+                                $(".taksit-container").children().hide();
+                                $(".taksit-container").show();
+                                $('.axess').show();
+                                $("#s-option_axess_1").prop('checked', true);
+                            } else if ((bankcode == 64) || (bankcode == 10)) {
+                                $(".taksit-container").hide();
+                                $(".taksit-container").children().hide();
+                                $(".taksit-container").show();
+                                $('.maximum').show();
+                                $("#s-option_maximum_1").prop('checked', true);
+                            } else if ((bankcode == 15) || (bankcode == 67) || (bankcode == 135) || (bankcode == 203)) {
+                                $(".taksit-container").hide();
+                                $(".taksit-container").children().hide();
+                                $(".taksit-container").show();
+                                $('.world').show();
+                                $("#s-option_world_1").prop('checked', true);
+                            } else if (bankcode == 111) {
+                                $(".taksit-container").hide();
+                                $(".taksit-container").children().hide();
+                                $(".taksit-container").show();
+                                $('.cardfinans').show();
+                            }else if(bankcode == 12){
+							$(".taksit-container").hide();
+                            $(".taksit-container").children().hide();
+                            $(".taksit-container").show();
+                            $('.paraf').show();
+						}
                         }
+                        $.ajaxSetup({cache: false});
+                        $('#mokacardnumber').keyup(function () {
+                            var searchField = $('#mokacardnumber').val();
+                            searchField = searchField.replace(/\s/g, '');
+                            if (searchField.length < 6) {
+                                cardshow(0);
+                                return;
+                            }
+                            ;
+                            if (searchField.length > 6)
+                                return;
+
+                            $.getJSON('' + theme + 'bins.json', function (data) {
+
+                                $.each(data, function (key, value) {
+
+                                    if (value.bin_number == searchField)
+                                    {
+
+                                        cardshow(value.bank_code);
+                                    }
+                                });
+                            });
+                        });
+
+                    });
+                }
+
+                $(".moka-i-icon img").hover(function () {
+                    $(".info-window").toggleClass("info-window-active");
+                });
+
+                $('.c-card').bind('keypress keyup keydown focus', function (e) {
+                    var ErrorInput = false;
+                    if ($("input.card-name").hasClass("jp-card-invalid")) {
+                        ErrorInput = true;
+                        $("input.card-name").addClass("border");
                     }
-                }
-            }
-            if (empty($paid)) {
-                $taksit = $total;
-                $paid = number_format($taksit, 2, '.', '');
-                $installement = 1;
-            }
-
-            $amount = $order->get_total();
-            $user_id = get_current_user_id();
-            $currency = $order->get_currency();
-			if($currency=='TRY'){$currency="TL";}
-            $ucdaktif = $this->kahvedigital_moka_tdmode;
-            if ($ucdaktif == 'off') {
-                $moka_url = "https://service.moka.com/PaymentDealer/DoDirectPayment";
-            } else {
-
-                $moka_url = "https://service.moka.com/PaymentDealer/DoDirectPaymentThreeD";
-            }
-            $dealer_code = $this->kahvedigital_moka_dealercode;
-            $username = $this->kahvedigital_moka_username;
-            $password = $this->kahvedigital_moka_password;
-            $orderid = 'Kahve' . $order_id . "-" . time();
-            $SubMerchantName = "";
-            $checkkey = hash("sha256", $dealer_code . "MK" . $username . "PD" . $password);
-            $veri = array('PaymentDealerAuthentication' => array('DealerCode' => $dealer_code, 'Username' => $username, 'Password' => $password,
-                    'CheckKey' => $checkkey),
-                'PaymentDealerRequest' => array('CardHolderFullName' => $name,
-                    'CardNumber' => $number,
-                    'ExpMonth' => $expiryMM,
-                    'ExpYear' => '20' . $expiryYY,
-                    'CvcNumber' => $cvc,
-                    'Amount' => $paid,
-                    'Currency' => $currency,
-                    'InstallmentNumber' => $installement,
-                    'ClientIP' => $_SERVER['REMOTE_ADDR'],
-                    'RedirectUrl' => $order->get_checkout_payment_url(true),
-                    'OtherTrxCode' => (string) $order_id,
-                    'SubMerchantName' => $SubMerchantName));
-
-            $veri = json_encode($veri);
-            $ch = curl_init($moka_url);
-            curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-            curl_setopt($ch, CURLOPT_POST, 1);
-            curl_setopt($ch, CURLOPT_POSTFIELDS, $veri);
-            curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-Type:application/json'));
-            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
-            $result = curl_exec($ch);
-            curl_close($ch);
-            $result = json_decode($result);
-            $ResultCode = $result->ResultCode;
-            $record = array(
-                'id_cart' => $order_id,
-                'id_customer' => $user_id,
-                'amount' => $paid,
-                'amount_paid' => $showtotal,
-                'installment' => $installement,
-                'kahvedigital_moka' => $orderid,
-                'result_code' => '0',
-                'result_message' => '',
-                'result' => false
-            );
-            if ($result->ResultCode == 'Success') {
-                header("Location:" . $result->Data);
-            } else {
-
-                switch ($ResultCode) {
-                    case "PaymentDealer.CheckPaymentDealerAuthentication.InvalidRequest":
-                        $errr = "Hatalı hash bilgisi";
-                        break;
-                    case "PaymentDealer.RequiredFields.AmountRequired":
-                        $errr = "Tutar Göndermek Zorunludur.";
-                        break;
-                    case "PaymentDealer.RequiredFields.ExpMonthRequired":
-                        $errr = "Son Kullanım Tarihi Gönderme Zorunludur.";
-                        break;
-
-                    case "PaymentDealer.CheckPaymentDealerAuthentication.InvalidAccount":
-                        $errr = "Böyle bir bayi bulunamadı";
-                        break;
-                    case "PaymentDealer.CheckPaymentDealerAuthentication.VirtualPosNotFound":
-                        $errr = "Bu bayi için sanal pos tanımı yapılmamış";
-                        break;
-                    case "PaymentDealer.CheckDealerPaymentLimits.DailyDealerLimitExceeded":
-                        $errr = "Bayi için tanımlı günlük limitlerden herhangi biri aşıldı";
-                        break;
-                    case "PaymentDealer.CheckDealerPaymentLimits.DailyCardLimitExceeded":
-                        $errr = "Gün içinde bu kart kullanılarak daha fazla işlem yapılamaz";
-
-                    case "PaymentDealer.CheckCardInfo.InvalidCardInfo":
-                        $errr = "Kart bilgilerinde hata var";
-                        break;
-                    case "PaymentDealer.DoDirectPayment3dRequest.InstallmentNotAvailableForForeignCurrencyTransaction":
-
-                        $errr = "Yabancı para ile taksit yapılamaz";
-                        break;
-                    case "PaymentDealer.DoDirectPayment3dRequest.ThisInstallmentNumberNotAvailableForDealer":
-                        $errr = "Bu taksit sayısı bu bayi için yapılamaz";
-                        break;
-                    case "PaymentDealer.DoDirectPayment3dRequest.InvalidInstallmentNumber":
-                        $errr = "Taksit sayısı 2 ile 9 arasıdır";
-                        break;
-                    case "PaymentDealer.DoDirectPayment3dRequest.ThisInstallmentNumberNotAvailableForVirtualPos":
-                        $errr = "Sanal Pos bu taksit sayısına izin vermiyor";
-                        break;
-
-                    default:
-                        $errr = "Beklenmeyen bir hata oluştu";
-                }
-                $error_msg = $errr;
-                $record['result_code'] = $ResultCode;
-                $record['result_message'] = $error_msg;
-            }
-            if (!$result OR $result == NULL) {
-                $record['result_code'] = 'CURL-LOAD_ERROR';
-                $record['result_message'] = 'WebServis Error ';
-                return $record;
-            }
-            if (isset($result->ResultCode) AND $result->ResultCode == "Success") {
-                if (isset($result->Data->IsSuccessful) AND $result->Data->IsSuccessful) {
-                    $record['result_code'] = '99';
-                    $record['result_message'] = $result->ResultCode;
-                    $record['result'] = true;
-                    return $record;
-                }
-                return $record;
-            }
-            return $record;
-        }
-
-        function receipt_page($orderid) {
-            global $woocommerce;
-            $error_message = false;
-            $order = new WC_Order($orderid);
-            $rates = Kahvedigital::calculatePrices($order->get_total(), $this->rates);
-            $status = $order->get_status();
-            $showtotal = $order->get_total();
-			$currency=$order->get_currency();
-            $installments_mode = $this->installments_mode;
-            if ($status != 'pending')
-                return 'ok';
-            if (isset($_POST['order_id']) AND $_POST['order_id'] == $orderid) {
-                $record = $this->post2Moka($orderid);
-            }
-
-            if (isset($_POST['isSuccessful']) AND $_POST['isSuccessful']) {
-                $record['result_code'] = $_POST['resultCode'];
-                $record['result_message'] = $_POST['resultMessage'];
-                $record['result'] = $_POST['isSuccessful'] == 'True' ? true : false;
-            }
-            if (isset($record['result'])) {
-                if ($record['result']) {
-                    if ($record['amount_paid'] - $record['amount'] > 0) {
-                        $installment_fee = $showtotal - $record['amount'];
-                        $order_fee = new stdClass();
-                        $order_fee->id = 'komisyon-farki';
-                        $order_fee->name = __('Installment Fee', 'moka-payment-module');
-                        $order_fee->amount = $installment_fee;
-                        $order_fee->taxable = false;
-                        $order_fee->tax = 0;
-                        $order_fee->tax_data = array();
-                        $order_fee->tax_class = '';
-                        $fee_id = $order->add_fee($order_fee);
-                        $order->calculate_totals(true);
+                    if ($("input.cardnumber").hasClass("jp-card-invalid")) {
+                        ErrorInput = true;
+                        $("input.cardnumber").addClass("border");
                     }
-                    $order->update_status('processing', __('Processing Moka payment', 'woocommerce'));
+                    if ($("input.c-date").hasClass("jp-card-invalid")) {
+                        ErrorInput = true;
+                        $("input.c-date").addClass("border");
+                    }
+                    if ($("input.card-cvc").hasClass("jp-card-invalid")) {
+                        ErrorInput = true;
+                        $("input.card-cvc").addClass("border");
+                    }
+                    if (ErrorInput === true) {
+                        $('.mokaode').attr("disabled", true);
+                        $(".mokaode").css("opacity", "0.5");
 
-                    $order->add_order_note(__('Payment successful.', 'moka-payment-module') . '<br/>' . __('Payment ID', 'moka-payment-module') . ': ' . esc_sql($record['amount_paid']));
-                    $order->payment_complete();
-                     WC()->cart->empty_cart();
-                    wp_redirect($this->get_return_url());
-                    $error_message = false;
-                } else {
-                    $order->update_status('pending', '3D Secure yönlendirmesi bekleniyor', 'woocommerce');
-                    $error_message = __('Banka Cevabı:', 'moka-payment-module') . 'HATA:' . $record['result_message'];
-                }
-            }
-            if ($status != 'pending')
-                $order->get_status();
-            include(dirname(__FILE__) . '/mokaform.php');
-        }
+                    } else {
 
-        function process_payment($order_id) {
-            $order = new WC_Order($order_id);
+                        $("input.card-name").removeClass("border");
+                        $("input.cardnumber").removeClass("border");
+                        $("input.c-date").removeClass("border");
+                        $("input.card-cvc").removeClass("border");
+                        $('.mokaode').attr("disabled", false);
+                        $(".mokaode").css("opacity", "1");
 
-            if (version_compare(WOOCOMMERCE_VERSION, '2.1.0', '>=')) {
-                /* 2.1.0 */
-                $checkout_payment_url = $order->get_checkout_payment_url(true);
-            } else {
-                /* 2.0.0 */
-                $checkout_payment_url = get_permalink(get_option('woocommerce_pay_page_id'));
-            }
+                    }
 
-            return array(
-                'result' => 'success',
-                'redirect' => $checkout_payment_url,
-            );
-        }
-
-    }
-
-}
-
-add_filter('woocommerce_payment_gateways', 'woocommerce_add_moka_checkout_form_gateway');
-
-function woocommerce_add_moka_checkout_form_gateway($methods) {
-    $methods[] = 'WC_Gateway_Mokapos';
-    return $methods;
-}
-
-function moka_checkout_form_load_plugin_textdomain() {
-    load_plugin_textdomain('moka-payment-module', FALSE, plugin_basename(dirname(__FILE__)) . '/i18n/languages/');
-}
-
-add_action('plugins_loaded', 'moka_checkout_form_load_plugin_textdomain');
+                });
 
 
+
+            </script>
