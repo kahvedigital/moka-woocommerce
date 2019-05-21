@@ -199,6 +199,12 @@ $moka_url = plugins_url() . '/moka-payment-module/';
                             $(".axess").show();
                             $("#s-option_axess_1").prop('checked', true);
                         });
+						 $(".paraf-logo").click(function () {
+                        cardshow(0);
+                        $(".taksit-container").show();
+                        $(".paraf").show();
+                        $("#s-option_paraf_1").prop('checked', true);
+						});
                         $(".bonus-logo").click(function () {
                             cardshow(0);
                             $(".taksit-container").show();
@@ -250,7 +256,12 @@ $moka_url = plugins_url() . '/moka-payment-module/';
                                 $(".taksit-container").children().hide();
                                 $(".taksit-container").show();
                                 $('.cardfinans').show();
-                            }
+                            }else if(bankcode == 12){
+							$(".taksit-container").hide();
+                            $(".taksit-container").children().hide();
+                            $(".taksit-container").show();
+                            $('.paraf').show();
+						}
                         }
                         $.ajaxSetup({cache: false});
                         $('#mokacardnumber').keyup(function () {
