@@ -259,10 +259,10 @@ function woocommerce_moka_from_init() {
 			if($currency=='TRY'){$currency="TL";}
             $ucdaktif = $this->kahvedigital_moka_tdmode;
             if ($ucdaktif == 'off') {
-                $moka_url = "https://service.testmoka.com/PaymentDealer/DoDirectPayment";
+                $moka_url = "https://service.moka.com/PaymentDealer/DoDirectPayment";
             } else {
 
-                $moka_url = "https://service.testmoka.com/PaymentDealer/DoDirectPayment";
+                $moka_url = "https://service.moka.com/PaymentDealer/DoDirectPaymentThreeD";
             }
             $dealer_code = $this->kahvedigital_moka_dealercode;
             $username = $this->kahvedigital_moka_username;
@@ -352,7 +352,7 @@ function woocommerce_moka_from_init() {
                         break;
 
                     default:
-                        $errr = "Beklenmeyen bir hata oluştu".$ResultCode;
+                        $errr = "Beklenmeyen bir hata oluştu";
                 }
                 $error_msg = $errr;
                 $record['result_code'] = $ResultCode;
