@@ -30,7 +30,7 @@ $moka_url = plugins_url() . '/moka-payment-module/';
             <div id="moka-form" class="mokaform" > 
 
                 <div class="tum">
-                    <h3 class="odemeform-baslik">Ödeme Formu</h3>
+                    <h3 class="odemeform-baslik"><?php echo __('Payment Form', 'moka-payment-module') ?></h3>
                     <div class="hepsi">
 
                         <div class="demo-container">
@@ -41,18 +41,18 @@ $moka_url = plugins_url() . '/moka-payment-module/';
 
 
                                     <div class="mokaname mokafull">
-                                        <input class="c-card card-name" placeholder="Kart İsim Soyisim" type="text" required    oninvalid="this.setCustomValidity('Kart sahibinin adını yazınız.')"  oninput="setCustomValidity('')" name="card-name" id="card-name">
+                                        <input class="c-card card-name" placeholder="<?php echo __('Name on Card', 'moka-payment-module'); ?>" type="text" required    oninvalid="this.setCustomValidity('Kart sahibinin adını yazınız.')"  oninput="setCustomValidity('')" name="card-name" id="card-name">
                                     </div>
                                     <input value="<?php echo $orderid ?>" name="order_id" type="hidden">
 
                                         <div class="mokacard mokaorta">
                                             <i class="mokacardicon"></i>
-                                            <input id="mokacardnumber" class="c-card cardnumber" placeholder="Kart Numarası" required   oninvalid="this.setCustomValidity('Kartın üzerindeki 16 haneli numarayı giriniz.')" oninput="setCustomValidity('')" type="tel" name="number" >
+                                            <input id="mokacardnumber" class="c-card cardnumber" placeholder="<?php echo __('Card Number', 'moka-payment-module'); ?>" required   oninvalid="this.setCustomValidity('Kartın üzerindeki 16 haneli numarayı giriniz.')" oninput="setCustomValidity('')" type="tel" name="number" >
                                         </div>
 
 
                                         <div class="mokaleft mokaexpry">
-                                            <input class="c-date c-card"  placeholder="AA/YY" type="tel" maxlength="7" required  oninvalid="this.setCustomValidity('Kartın son kullanma tarihini giriniz')" oninput="setCustomValidity('')" name="expiry" >
+                                            <input class="c-date c-card"  placeholder="<?php echo __('MM/YY', 'moka-payment-module'); ?>" type="tel" maxlength="7" required  oninvalid="this.setCustomValidity('Kartın son kullanma tarihini giriniz')" oninput="setCustomValidity('')" name="expiry" >
                                         </div>
 
                                         <div class="mokaright mokacvc">
@@ -77,7 +77,7 @@ $moka_url = plugins_url() . '/moka-payment-module/';
 
                                                 <div class="taksit-secenek">
                                                     <?php if ($installments_mode == 'on') { ?>
-                                                        <h3 class="taksit-secenekleri">Taksit Seçenekleri</h3>
+                                                        <h3 class="taksit-secenekleri"><?php echo __('All Installment', 'moka-payment-module'); ?></h3>
 
                                                         <div class="logolar-moka">
 
@@ -114,7 +114,7 @@ $moka_url = plugins_url() . '/moka-payment-module/';
       	 <?php if ($rates[$banks]['installments'][$ins]['active']==1){   ?>
                                                                     <li class="taksit-li mokaorta">
                                                                         <input type="radio" id="s-option_<?php echo $banks; ?>_<?php echo $ins; ?>" name="mokatotal[<?php echo $banks; ?>][<?php echo $ins; ?>]" value="<?php echo $rates[$banks]['installments'][$ins]['total']; ?>" class="option-input  taksitradio radio">
-                                                                            <label for="s-option2"><?php echo $ins ?> Taksit</label>
+                                                                            <label for="s-option2"><?php echo $ins ?> <?php echo __('Installment', 'moka-payment-module'); ?></label>
                                                                             <div class="taksit-fiyat"> <?php echo $rates[$banks]['installments'][$ins]['total']; ?> / <?php echo $rates[$banks]['installments'][$ins]['monthly']; ?> </div>
                                                                             <div class="check"><div class="inside"></div></div>
                                                                     </li>
@@ -138,7 +138,7 @@ $moka_url = plugins_url() . '/moka-payment-module/';
 
                                             </div>
                                         <?php } ?>	
-                                        <button type="submit" class="mokaode" style=""><span class="mokaOdemeTutar"><?php echo $showtotal; ?></span><span class="currency"> <?php echo $currency; ?></span><span class="mokaOdemeText"> ÖDE</span></button>
+                                        <button type="submit" class="mokaode" style=""><span class="mokaOdemeTutar"><?php echo $showtotal; ?></span><span class="currency"> <?php echo $currency; ?></span><span class="mokaOdemeText"> <?php echo __('Pay', 'moka-payment-module'); ?></span></button>
                                 </form>
 
                             </div>

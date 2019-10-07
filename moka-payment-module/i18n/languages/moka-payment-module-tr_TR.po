@@ -99,3 +99,24 @@ msgstr "Lütfen formu kontrol edip tekrar deneyin."
 msgid "This controls the description which the user sees during checkout."
 msgstr "Bu, kullanıcının ödeme sırasında gördüğü açıklamayı kontrol eder."
 
+msgid "Name on Card"
+msgstr "Kart İsim Soyisim"
+
+msgid "Card Number"
+msgstr "Kart Numarası"
+
+msgid "MM/YY"
+msgstr "AA/YY"
+
+
+msgid "All Installment"
+msgstr "Taksit Seçenekleri"
+
+msgid "Pay"
+msgstr "Öde"
+
+msgid "Installment"
+msgstr "Taksit"
+
+msgid "Payment Form"
+msgstr "Ödeme Formu"
