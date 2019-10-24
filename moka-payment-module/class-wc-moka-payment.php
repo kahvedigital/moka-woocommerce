@@ -13,15 +13,16 @@
 if (!defined('ABSPATH')) {
     exit;
 }
-error_reporting(E_ALL ^ E_NOTICE);
-include( plugin_dir_path(__FILE__) . 'includes/class-kahvedigital_mokaconfig.php');
+
+include plugin_dir_path(__FILE__) . 'includes/class-kahvedigital_mokaconfig.php';
 global $moka_db_version;
 $moka_db_version = '1.0';
 register_deactivation_hook(__FILE__, 'moka_deactivation');
 register_activation_hook(__FILE__, 'moka_activate');
 add_action('plugins_loaded', 'moka_update_db_check');
 
-function moka_update_db_check() {
+function moka_update_db_check()
+{
     global $moka_db_version;
     global $wpdb;
     $installed_ver = get_option("moka_db_version");
@@ -30,23 +31,26 @@ function moka_update_db_check() {
     }
 }
 
-function moka_update() {
+function moka_update()
+{
     global $moka_db_version;
     update_option("moka_db_version", $moka_db_version);
 }
 
-function moka_activate() {
+function moka_activate()
+{
     global $wpdb;
     global $moka_db_version;
     $moka_db_version = '1.0';
 
     $charset_collate = $wpdb->get_charset_collate();
-    require_once( ABSPATH . 'wp-admin/includes/upgrade.php' );
+    require_once ABSPATH . 'wp-admin/includes/upgrade.php';
 
     add_option('moka_db_version', $moka_db_version);
 }
 
-function moka_deactivation() {
+function moka_deactivation()
+{
     global $wpdb;
     global $moka_db_version;
 
@@ -54,19 +58,24 @@ function moka_deactivation() {
     flush_rewrite_rules();
 }
 
-function moka_install_data() {
+function moka_install_data()
+{
     global $wpdb;
 }
 
 add_action('plugins_loaded', 'woocommerce_moka_from_init', 0);
 
-function woocommerce_moka_from_init() {
-    if (!class_exists('WC_Payment_Gateway'))
+function woocommerce_moka_from_init()
+{
+    if (!class_exists('WC_Payment_Gateway')) {
         return;
+    }
 
-    class WC_Gateway_Mokapos extends WC_Payment_Gateway {
+    class WC_Gateway_Mokapos extends WC_Payment_Gateway
+    {
 
-        public function __construct() {
+        public function __construct()
+        {
             $this->id = 'mokapos';
             $this->method_title = __('Moka Checkout form', 'moka-payment-module');
             $this->method_description = __('Moka Payment Module', 'moka-payment-module');
@@ -85,7 +94,7 @@ function woocommerce_moka_from_init() {
             $this->description = $this->settings['description'];
             $this->enabled = $this->settings['enabled'];
             $this->order_button_text = $this->settings['button_title'];
-            add_action('init', array(&$this, 'check_mokapos_response'));
+            add_action('init', array($this, 'check_mokapos_response'));
             add_action('woocommerce_api_wc_gateway_mokapos', array($this, 'check_mokapos_response'));
             add_action('admin_notices', array($this, 'checksFields'));
             if (version_compare(WOOCOMMERCE_VERSION, '2.0.0', '>=')) {
@@ -94,16 +103,61 @@ function woocommerce_moka_from_init() {
                 add_action('woocommerce_update_options_payment_gateways', array($this, 'process_admin_options'));
             }
             add_action('woocommerce_receipt_mokapos', array($this, 'receipt_page'));
+            add_action('woocommerce_api_' . $this->id, array($this, 'callback_handler'));
         }
 
-        function checksFields() {
+        function callback_handler()
+        {
+            header('HTTP/1.1 200 OK');
+
+            $moka = array();
+            $dealer_code = $this->kahvedigital_moka_dealercode;
+            $username = $this->kahvedigital_moka_username;
+            $password = $this->kahvedigital_moka_password;
+
+            $checkkey = hash("sha256", $dealer_code . "MK" . $username . "PD" . $password);
+
+            $moka = array();
+            $moka['PaymentDealerAuthentication'] = array(
+                'DealerCode' => $dealer_code,
+                'Username' => $username,
+                'Password' => $password,
+                'CheckKey' => $checkkey,
+
+            );
+
+            $moka['BankCardInformationRequest'] = array(
+                'BinNumber' => $_POST['BinNumber'], //$BinData['binNumber']
+            );
+
+            $moka_url = "https://service.moka.com/PaymentDealer/GetBankCardInformation";
+
+            $veri = json_encode($moka);
+            $ch = curl_init($moka_url);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+            curl_setopt($ch, CURLOPT_POST, 1);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, $veri);
+            curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-Type:application/json'));
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
+            $result = curl_exec($ch);
+            curl_close($ch);
+
+            print_r($result);
+            die();
+        }
+
+        function checksFields()
+        {
             global $woocommerce;
 
-            if ($this->enabled == 'no')
+            if ($this->enabled == 'no') {
                 return;
+            }
+
         }
 
-        function init_form_fields() {
+        function init_form_fields()
+        {
             $this->form_fields = array(
                 'enabled' => array(
                     'title' => __('Enable/Disable', 'moka-payment-module'),
@@ -115,7 +169,7 @@ function woocommerce_moka_from_init() {
                     'title' => __('Title', 'moka-payment-module'),
                     'type' => 'text',
                     'description' => __('This message will show to the user during checkout.', 'moka-payment-module'),
-                    'default' => 'Kredi Kartı İle Öde'
+                    'default' => 'Kredi Kartı İle Öde',
                 ),
                 'description' => array(
                     'title' => __('Description.', 'moka-payment-module'),
@@ -163,11 +217,12 @@ function woocommerce_moka_from_init() {
                         'off' => __('OFF', 'moka-payment-module'),
                         'on' => __('ON', 'moka-payment-module'),
                     ),
-                )
+                ),
             );
         }
 
-        public function admin_options() {
+        public function admin_options()
+        {
             $this->rates = get_option('kahvedigital_moka_rates');
             if (isset($_POST['kahvedigital_moka_rates'])) {
                 KahveDigital::register_all_ins();
@@ -178,25 +233,30 @@ function woocommerce_moka_from_init() {
             echo '<table class="form-table">';
             $this->generate_settings_html();
             echo '</table>';
-            if ($this->rates == false)
+            if ($this->rates == false) {
                 $installments = KahveDigital::createRatesUpdateForm(KahveDigital::setRatesDefault());
-            else
+            } else {
                 $installments = KahveDigital::createRatesUpdateForm(get_option('kahvedigital_moka_rates'));
+            }
+
             echo '<input name="save" class="button-primary woocommerce-save-button" type="submit" value="Kaydet"><hr/>';
-            echo"<hr/><h1>";
+            echo "<hr/><h1>";
             echo __('installments options.', 'moka-payment-module');
             echo "</h1><hr/> ";
             echo $installments;
             echo '<input name="save" class="button-primary woocommerce-save-button" type="submit" value="Kaydet"><hr/>';
-            include(dirname(__FILE__) . '/includes/kahvedigital_moka-help-about.php');
+            include dirname(__FILE__) . '/includes/kahvedigital_moka-help-about.php';
         }
 
-        function post2Moka($order_id) {
+        function post2Moka($order_id)
+        {
             global $woocommerce;
-            if (version_compare(get_bloginfo('version'), '4.5', '>='))
+            if (version_compare(get_bloginfo('version'), '4.5', '>=')) {
                 wp_get_current_user();
-            else
+            } else {
                 get_currentuserinfo();
+            }
+
             $order = new WC_Order($order_id);
 
             $ip = $_SERVER['REMOTE_ADDR'];
@@ -205,7 +265,8 @@ function woocommerce_moka_from_init() {
 
             if (!function_exists('replaceSpace')) {
 
-                function replaceSpace($veri) {
+                function replaceSpace($veri)
+                {
                     $veri = str_replace("/s+/", "", $veri);
                     $veri = str_replace(" ", "", $veri);
                     $veri = str_replace(" ", "", $veri);
@@ -217,7 +278,6 @@ function woocommerce_moka_from_init() {
                 }
 
             }
-
 
             $name = $_POST['card-name'];
             $number = $_POST['number'];
@@ -256,7 +316,7 @@ function woocommerce_moka_from_init() {
             $amount = $order->get_total();
             $user_id = get_current_user_id();
             $currency = $order->get_currency();
-			if($currency=='TRY'){$currency="TL";}
+            if ($currency == 'TRY') {$currency = "TL";}
             $ucdaktif = $this->kahvedigital_moka_tdmode;
             if ($ucdaktif == 'off') {
                 $moka_url = "https://service.moka.com/PaymentDealer/DoDirectPayment";
@@ -271,7 +331,7 @@ function woocommerce_moka_from_init() {
             $SubMerchantName = "";
             $checkkey = hash("sha256", $dealer_code . "MK" . $username . "PD" . $password);
             $veri = array('PaymentDealerAuthentication' => array('DealerCode' => $dealer_code, 'Username' => $username, 'Password' => $password,
-                    'CheckKey' => $checkkey),
+                'CheckKey' => $checkkey),
                 'PaymentDealerRequest' => array('CardHolderFullName' => $name,
                     'CardNumber' => $number,
                     'ExpMonth' => $expiryMM,
@@ -305,7 +365,7 @@ function woocommerce_moka_from_init() {
                 'kahvedigital_moka' => $orderid,
                 'result_code' => '0',
                 'result_message' => '',
-                'result' => false
+                'result' => false,
             );
             if ($result->ResultCode == 'Success') {
                 header("Location:" . $result->Data);
@@ -358,13 +418,13 @@ function woocommerce_moka_from_init() {
                 $record['result_code'] = $ResultCode;
                 $record['result_message'] = $error_msg;
             }
-            if (!$result OR $result == NULL) {
+            if (!$result or $result == null) {
                 $record['result_code'] = 'CURL-LOAD_ERROR';
                 $record['result_message'] = 'WebServis Error ';
                 return $record;
             }
-            if (isset($result->ResultCode) AND $result->ResultCode == "Success") {
-                if (isset($result->Data->IsSuccessful) AND $result->Data->IsSuccessful) {
+            if (isset($result->ResultCode) and $result->ResultCode == "Success") {
+                if (isset($result->Data->IsSuccessful) and $result->Data->IsSuccessful) {
                     $record['result_code'] = '99';
                     $record['result_message'] = $result->ResultCode;
                     $record['result'] = true;
@@ -375,22 +435,25 @@ function woocommerce_moka_from_init() {
             return $record;
         }
 
-        function receipt_page($orderid) {
+        function receipt_page($orderid)
+        {
             global $woocommerce;
             $error_message = false;
             $order = new WC_Order($orderid);
             $rates = Kahvedigital::calculatePrices($order->get_total(), $this->rates);
             $status = $order->get_status();
             $showtotal = $order->get_total();
-			$currency=$order->get_currency();
+            $currency = $order->get_currency();
             $installments_mode = $this->installments_mode;
-            if ($status != 'pending')
+            if ($status != 'pending') {
                 return 'ok';
-            if (isset($_POST['order_id']) AND $_POST['order_id'] == $orderid) {
+            }
+
+            if (isset($_POST['order_id']) and $_POST['order_id'] == $orderid) {
                 $record = $this->post2Moka($orderid);
             }
 
-            if (isset($_POST['isSuccessful']) AND $_POST['isSuccessful']) {
+            if (isset($_POST['isSuccessful']) and $_POST['isSuccessful']) {
                 $record['result_code'] = $_POST['resultCode'];
                 $record['result_message'] = $_POST['resultMessage'];
                 $record['result'] = $_POST['isSuccessful'] == 'True' ? true : false;
@@ -414,7 +477,7 @@ function woocommerce_moka_from_init() {
 
                     $order->add_order_note(__('Payment successful.', 'moka-payment-module') . '<br/>' . __('Payment ID', 'moka-payment-module') . ': ' . esc_sql($record['amount_paid']));
                     $order->payment_complete();
-                     WC()->cart->empty_cart();
+                    WC()->cart->empty_cart();
                     wp_redirect($this->get_return_url());
                     $error_message = false;
                 } else {
@@ -422,12 +485,15 @@ function woocommerce_moka_from_init() {
                     $error_message = __('Banka Cevabı:', 'moka-payment-module') . 'HATA:' . $record['result_message'];
                 }
             }
-            if ($status != 'pending')
+            if ($status != 'pending') {
                 $order->get_status();
-            include(dirname(__FILE__) . '/mokaform.php');
+            }
+
+            include dirname(__FILE__) . '/mokaform.php';
         }
 
-        function process_payment($order_id) {
+        function process_payment($order_id)
+        {
             $order = new WC_Order($order_id);
 
             if (version_compare(WOOCOMMERCE_VERSION, '2.1.0', '>=')) {
@@ -450,15 +516,15 @@ function woocommerce_moka_from_init() {
 
 add_filter('woocommerce_payment_gateways', 'woocommerce_add_moka_checkout_form_gateway');
 
-function woocommerce_add_moka_checkout_form_gateway($methods) {
+function woocommerce_add_moka_checkout_form_gateway($methods)
+{
     $methods[] = 'WC_Gateway_Mokapos';
     return $methods;
 }
 
-function moka_checkout_form_load_plugin_textdomain() {
-    load_plugin_textdomain('moka-payment-module', FALSE, plugin_basename(dirname(__FILE__)) . '/i18n/languages/');
+function moka_checkout_form_load_plugin_textdomain()
+{
+    load_plugin_textdomain('moka-payment-module', false, plugin_basename(dirname(__FILE__)) . '/i18n/languages/');
 }
 
 add_action('plugins_loaded', 'moka_checkout_form_load_plugin_textdomain');
-
-

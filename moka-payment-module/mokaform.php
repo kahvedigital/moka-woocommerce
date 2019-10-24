@@ -10,24 +10,24 @@ $moka_url = plugins_url() . '/moka-payment-module/';
 
 <script src="<?php echo $moka_url ?>/assets/js/card.js"></script>
 
-<?php if ($error_message) { ?>
+<?php if ($error_message) {?>
     <div class="row">
         <ul class="woocommerce-error" id="errDiv">
             <li>
-                <?php echo __('Payment Error.', 'moka-payment-module') ?> 
+                <?php echo __('Payment Error.', 'moka-payment-module') ?>
                 <b><?php echo $error_message; ?></b><br/>
                 <?php echo __('Please check the form and try again.', 'moka-payment-module') ?>
             </li>
         </ul>
     </div>
-<?php } ?>
+<?php }?>
 <link rel="stylesheet" type="text/css" href="<?php echo $moka_url ?>assets/css/moka.css">
-    <div class= "row"> 
+    <div class= "row">
         <div class="col-xs-12">
 
 
 
-            <div id="moka-form" class="mokaform" > 
+            <div id="moka-form" class="mokaform" >
 
                 <div class="tum">
                     <h3 class="odemeform-baslik"><?php echo __('Payment Form', 'moka-payment-module') ?></h3>
@@ -76,42 +76,42 @@ $moka_url = plugins_url() . '/moka-payment-module/';
                                                 </li>
 
                                                 <div class="taksit-secenek">
-                                                    <?php if ($installments_mode == 'on') { ?>
+                                                    <?php if ($installments_mode == 'on') {?>
                                                         <h3 class="taksit-secenekleri"><?php echo __('All Installment', 'moka-payment-module'); ?></h3>
 
                                                         <div class="logolar-moka">
 
-                                                            <?php foreach ($rates as $bank => $rate) { ?>
+                                                            <?php foreach ($rates as $bank => $rate) {?>
 
 
 
                                                                 <div class="moka-banka-logo <?php echo $bank; ?>-logo"><img src="<?php echo $moka_url ?>img/<?php echo $bank ?>.svg"	></img></div>
 
 
-                                                            <?php } ?>	
+                                                            <?php }?>
                                                         </div>
 
-                                                    <?php } ?>	
+                                                    <?php }?>
                                                 </div>
-                                            </div>  
-                                        </div>  
-                                        <?php if ($installments_mode == 'on') { ?>
+                                            </div>
+                                        </div>
+                                        <?php if ($installments_mode == 'on') {?>
                                             <div class="taksit-container ">
-                                                <?php foreach ($rates as $bank => $rate) { ?>
+                                                <?php foreach ($rates as $bank => $rate) {?>
 
 
                                                     <div class="<?php echo $bank; ?>">
                                                         <div class="taksit-title "><img src="<?php echo $moka_url ?>img/<?php echo $bank ?>.svg"></div>
 
-                                                        <?php for ($ins = 1; $ins < 13; $ins++) { ?>
+                                                        <?php for ($ins = 1; $ins < 13; $ins++) {?>
 
 
-                                                            <?php foreach ($rates as $banks => $rate) { ?>
-                                                                <?php if ($bank == $banks) { ?>
+                                                            <?php foreach ($rates as $banks => $rate) {?>
+                                                                <?php if ($bank == $banks) {?>
 
 
 
-      	 <?php if ($rates[$banks]['installments'][$ins]['active']==1){   ?>
+      	 <?php if ($rates[$banks]['installments'][$ins]['active'] == 1) {?>
                                                                     <li class="taksit-li mokaorta">
                                                                         <input type="radio" id="s-option_<?php echo $banks; ?>_<?php echo $ins; ?>" name="mokatotal[<?php echo $banks; ?>][<?php echo $ins; ?>]" value="<?php echo $rates[$banks]['installments'][$ins]['total']; ?>" class="option-input  taksitradio radio">
                                                                             <label for="s-option2"><?php echo $ins ?> <?php echo __('Installment', 'moka-payment-module'); ?></label>
@@ -120,24 +120,24 @@ $moka_url = plugins_url() . '/moka-payment-module/';
                                                                     </li>
 
 
-      <?php } ?>
+      <?php }?>
 
 
-                                                                <?php } ?>
-                                                            <?php } ?>
+                                                                <?php }?>
+                                                            <?php }?>
 
-                                                        <?php } ?>
-
-
+                                                        <?php }?>
 
 
-                                                    </div>	
 
 
-                                                <?php } ?>
+                                                    </div>
+
+
+                                                <?php }?>
 
                                             </div>
-                                        <?php } ?>	
+                                        <?php }?>
                                         <button type="submit" class="mokaode" style=""><span class="mokaOdemeTutar"><?php echo $showtotal; ?></span><span class="currency"> <?php echo $currency; ?></span><span class="mokaOdemeText"> <?php echo __('Pay', 'moka-payment-module'); ?></span></button>
                                 </form>
 
@@ -146,7 +146,7 @@ $moka_url = plugins_url() . '/moka-payment-module/';
 
                         </div>
                         <div class="card-wrapper" style="margin-left:5px;"></div>
-                    </div>  
+                    </div>
 
 
                 </div>
@@ -173,7 +173,7 @@ $moka_url = plugins_url() . '/moka-payment-module/';
                     $('input[type=radio][name=mokatotal]').change(function () {
 
                         $('.mokaOdemeTutar').text(this.value);
-					$('.currency').text(" <?php echo $currency;?>");
+					$('.currency').text(" <?php echo $currency; ?>");
                     });
                 });
 
@@ -217,6 +217,18 @@ $moka_url = plugins_url() . '/moka-payment-module/';
                             $(".world").show();
                             $("#s-option_world_1").prop('checked', true);
                         });
+                        $(".combo-logo").click(function () {
+                            cardshow(0);
+                            $(".taksit-container").show();
+                            $(".combo").show();
+                            $("#s-option_combo_1").prop('checked', true);
+                        });
+                        $(".amex-logo").click(function () {
+                            cardshow(0);
+                            $(".taksit-container").show();
+                            $(".amex").show();
+                            $("#s-option_amex_1").prop('checked', true);
+                        });
                         $(".taksit-li").click(function () {
                             $(".taksit-li").find('input[type="radio"]').removeAttr('checked');
                             $(this).find('input[type="radio"]').prop('checked', true);
@@ -256,11 +268,25 @@ $moka_url = plugins_url() . '/moka-payment-module/';
                                 $(".taksit-container").children().hide();
                                 $(".taksit-container").show();
                                 $('.cardfinans').show();
+                                $("#s-option_cardfinans_1").prop('checked', true);
                             }else if(bankcode == 12){
 							$(".taksit-container").hide();
                             $(".taksit-container").children().hide();
                             $(".taksit-container").show();
                             $('.paraf').show();
+                            $("#s-option_paraf_1").prop('checked', true);
+						}else if(bankcode == 217){
+							$(".taksit-container").hide();
+                            $(".taksit-container").children().hide();
+                            $(".taksit-container").show();
+                            $('.combo').show();
+                            $("#s-option_combo_1").prop('checked', true);
+						}else if(bankcode == 100){
+							$(".taksit-container").hide();
+                            $(".taksit-container").children().hide();
+                            $(".taksit-container").show();
+                            $('.amex').show();
+                            $("#s-option_amex_1").prop('checked', true);
 						}
                         }
                         $.ajaxSetup({cache: false});
@@ -270,22 +296,43 @@ $moka_url = plugins_url() . '/moka-payment-module/';
                             if (searchField.length < 6) {
                                 cardshow(0);
                                 return;
-                            }
-                            ;
+                            };
                             if (searchField.length > 6)
                                 return;
 
-                            $.getJSON('' + theme + 'bins.json', function (data) {
 
-                                $.each(data, function (key, value) {
+                                jQuery.ajax({
+  type:"POST",
+  url: "/moka-payment-module/wc-api/mokapos/",
+  data: {
+      BinNumber: searchField
+  },
+  success:function(data){
+    var response=JSON.parse(data);
 
-                                    if (value.bin_number == searchField)
-                                    {
+  console.log(response.Data.BankCode);
 
-                                        cardshow(value.bank_code);
-                                    }
-                                });
-                            });
+  cardshow(response.Data.BankCode);
+  },
+  error: function(errorThrown){
+      alert(errorThrown);
+  }
+
+});
+
+
+
+                            // $.getJSON('' + theme + 'bins.json', function (data) {
+
+                            //     $.each(data, function (key, value) {
+
+                            //         if (value.bin_number == searchField)
+                            //         {
+
+                            //             cardshow(value.bank_code);
+                            //         }
+                            //     });
+                            // });
                         });
 
                     });
@@ -329,6 +376,8 @@ $moka_url = plugins_url() . '/moka-payment-module/';
                     }
 
                 });
+
+
 
 
 
