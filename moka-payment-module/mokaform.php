@@ -322,17 +322,7 @@ $moka_url = plugins_url() . '/moka-payment-module/';
 
 
 
-                            // $.getJSON('' + theme + 'bins.json', function (data) {
 
-                            //     $.each(data, function (key, value) {
-
-                            //         if (value.bin_number == searchField)
-                            //         {
-
-                            //             cardshow(value.bank_code);
-                            //         }
-                            //     });
-                            // });
                         });
 
                     });
