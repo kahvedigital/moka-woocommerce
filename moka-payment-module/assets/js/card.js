@@ -1087,6 +1087,14 @@ var card =
 	      length: [13, 16, 19],
 	      cvcLength: [3],
 	      luhn: true
+	    },
+		{
+	      type: 'TROY',
+	      pattern: /^9\d{0,16}$/,
+	      format: defaultFormat,
+	      length: [13, 16, 19],
+	      cvcLength: [3],
+	      luhn: true
 	    }
 	  ];
 
