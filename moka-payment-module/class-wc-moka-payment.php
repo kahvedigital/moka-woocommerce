@@ -464,7 +464,7 @@ function woocommerce_moka_from_init()
 
             $hashValue = $_POST['hashValue'];
             $HashSession = SHA256($_SESSION['CodeForHash']+"T");
-            if ($hashValue = $HashSession) {
+            if ($hashValue == $HashSession) {
                 $record['result'] = true;
             } else {
                 $record['result'] = false;
