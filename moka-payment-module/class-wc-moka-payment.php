@@ -343,6 +343,7 @@ function woocommerce_moka_from_init()
                     'ClientIP' => $_SERVER['REMOTE_ADDR'],
                     'RedirectUrl' => $order->get_checkout_payment_url(true),
                     'OtherTrxCode' => (string) $order_id,
+                    'ReturnHash' => 1,
                     'SubMerchantName' => $SubMerchantName));
 
             $veri = json_encode($veri);
@@ -368,7 +369,9 @@ function woocommerce_moka_from_init()
                 'result' => false,
             );
             if ($result->ResultCode == 'Success') {
-                header("Location:" . $result->Data);
+                session_start();
+                $_SESSION['CodeForHash'] = $result->Data->CodeForHash;
+                header("Location:" . $result->Data->Url);
             } else {
 
                 switch ($ResultCode) {
@@ -453,11 +456,23 @@ function woocommerce_moka_from_init()
                 $record = $this->post2Moka($orderid);
             }
 
-            if (isset($_POST['isSuccessful']) and $_POST['isSuccessful']) {
-                $record['result_code'] = $_POST['resultCode'];
-                $record['result_message'] = $_POST['resultMessage'];
-                $record['result'] = $_POST['isSuccessful'] == 'True' ? true : false;
+            
+           if (isset($_POST['hashValue'])) {
+            session_start();   
+            $record['result_code'] = $_POST['resultCode'];
+            $record['result_message'] = $_POST['resultMessage'];
+
+            $hashValue = $_POST['hashValue'];
+            $HashSession = SHA256($_SESSION['CodeForHash']+"T");
+            if ($hashValue = $HashSession) {
+                $record['result'] = true;
+            } else {
+                $record['result'] = false;
             }
+
+        }
+            
+            
             if (isset($record['result'])) {
                 if ($record['result']) {
                     if ($record['amount_paid'] - $record['amount'] > 0) {
