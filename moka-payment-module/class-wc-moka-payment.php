@@ -248,6 +248,26 @@ function woocommerce_moka_from_init()
             include dirname(__FILE__) . '/includes/kahvedigital_moka-help-about.php';
         }
 
+        
+                private function setcookieSameSite($name, $value, $expire, $path, $domain, $secure, $httponly)
+        {
+
+            if (PHP_VERSION_ID < 70300) {
+
+                setcookie($name, $value, $expire, "$path; samesite=None", $domain, $secure, $httponly);
+            } else {
+                setcookie($name, $value, [
+                    'expires' => $expire,
+                    'path' => $path,
+                    'domain' => $domain,
+                    'samesite' => 'None',
+                    'secure' => $secure,
+                    'httponly' => $httponly,
+                ]);
+
+            }
+        }
+
         function post2Moka($order_id)
         {
             global $woocommerce;
@@ -258,6 +278,14 @@ function woocommerce_moka_from_init()
             }
 
             $order = new WC_Order($order_id);
+            $wooCommerceCookieKey = 'wp_woocommerce_session_';
+            foreach ($_COOKIE as $name => $value) {
+                if (stripos($name, $wooCommerceCookieKey) === 0) {
+                    $wooCommerceCookieKey = $name;
+                }
+            }
+
+            $setCookie = $this->setcookieSameSite($wooCommerceCookieKey, $_COOKIE[$wooCommerceCookieKey], time() + 86400, "/", $_SERVER['SERVER_NAME'], true, true);
 
             $ip = $_SERVER['REMOTE_ADDR'];
 
